@@ -1,0 +1,274 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>JPYC EC Agent - World ID</title>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+    *{margin:0;padding:0;box-sizing:border-box}
+    body{
+      font-family:'Inter',system-ui,-apple-system,sans-serif;
+      background:#f7f7f7;
+      color:#191c20;
+      min-height:100vh;
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      padding:1rem;
+    }
+    /* Modal card */
+    .modal{
+      background:#fff;
+      border-radius:24px;
+      box-shadow:0 8px 40px rgba(0,0,0,0.12);
+      width:100%;
+      max-width:400px;
+      padding:32px 24px;
+      text-align:center;
+      position:relative;
+    }
+    /* World ID logo */
+    .worldid-logo{
+      width:48px;height:48px;
+      margin:0 auto 8px;
+      border-radius:12px;
+      background:#000;
+      display:flex;align-items:center;justify-content:center;
+    }
+    .worldid-logo svg{width:28px;height:28px;}
+    /* Partner logo */
+    .partner-row{
+      display:flex;align-items:center;justify-content:center;gap:8px;
+      margin-bottom:20px;
+    }
+    .partner-badge{
+      background:#f0f0f0;border-radius:20px;padding:4px 12px;
+      font-size:13px;font-weight:600;color:#555;
+      display:flex;align-items:center;gap:4px;
+    }
+    .partner-badge .dot{width:6px;height:6px;border-radius:50%;background:#22c55e;display:inline-block;}
+    /* Title */
+    .title{font-size:20px;font-weight:700;color:#191c20;margin-bottom:6px;}
+    .desc{font-size:14px;color:#6b7280;margin-bottom:24px;line-height:1.5;}
+    /* Divider */
+    .divider{height:1px;background:#e5e7eb;margin:20px 0;}
+    /* Human Badge */
+    .human-badge{
+      display:inline-flex;align-items:center;gap:6px;
+      background:#f0fdf4;border:1px solid #bbf7d0;
+      border-radius:20px;padding:6px 14px;
+      font-size:13px;font-weight:600;color:#166534;
+      margin-bottom:20px;
+    }
+    .human-badge svg{width:16px;height:16px;}
+    /* Button */
+    .btn-verify{
+      display:flex;align-items:center;justify-content:center;gap:10px;
+      width:100%;padding:16px;
+      background:#191c20;color:#fff;
+      border:none;border-radius:16px;
+      font-size:16px;font-weight:600;
+      cursor:pointer;
+      transition:all 0.2s;
+      font-family:inherit;
+    }
+    .btn-verify:hover{background:#2d3139;transform:translateY(-1px);box-shadow:0 4px 12px rgba(0,0,0,0.15);}
+    .btn-verify:active{transform:translateY(0);}
+    .btn-verify:disabled{background:#d1d5db;color:#9ca3af;cursor:not-allowed;transform:none;box-shadow:none;}
+    .btn-verify svg{width:20px;height:20px;}
+    /* Secondary button */
+    .btn-secondary{
+      display:none;
+      width:100%;padding:14px;margin-top:10px;
+      background:#fff;color:#191c20;
+      border:2px solid #e5e7eb;border-radius:16px;
+      font-size:15px;font-weight:600;
+      cursor:pointer;text-decoration:none;text-align:center;
+      font-family:inherit;
+      transition:all 0.2s;
+    }
+    .btn-secondary:hover{border-color:#191c20;}
+    .btn-back{
+      display:none;
+      width:100%;padding:14px;margin-top:10px;
+      background:#22c55e;color:#fff;
+      border:none;border-radius:16px;
+      font-size:15px;font-weight:600;
+      cursor:pointer;text-decoration:none;text-align:center;
+      font-family:inherit;
+      transition:all 0.2s;
+    }
+    .btn-back:hover{background:#16a34a;}
+    /* Status */
+    .status-box{
+      margin-top:20px;padding:16px;border-radius:16px;
+      font-size:14px;line-height:1.6;
+      display:none;
+    }
+    .status-box.show{display:block;}
+    .status-box.loading{background:#eff6ff;border:1px solid #bfdbfe;color:#1e40af;}
+    .status-box.success{background:#f0fdf4;border:1px solid #bbf7d0;color:#166534;}
+    .status-box.error{background:#fef2f2;border:1px solid #fecaca;color:#991b1b;}
+    /* Loading spinner */
+    .spinner{
+      display:inline-block;width:16px;height:16px;
+      border:2px solid currentColor;border-right-color:transparent;
+      border-radius:50%;
+      animation:spin .6s linear infinite;
+      vertical-align:middle;margin-right:6px;
+    }
+    @keyframes spin{to{transform:rotate(360deg)}}
+    /* Footer */
+    .footer{margin-top:20px;font-size:12px;color:#9ca3af;}
+    .footer a{color:#6b7280;text-decoration:underline;}
+    /* Order summary */
+    .order-summary{
+      background:#f9fafb;border-radius:12px;padding:16px;
+      text-align:left;margin-bottom:20px;
+      border:1px solid #e5e7eb;
+    }
+    .order-summary h3{font-size:13px;font-weight:600;color:#6b7280;text-transform:uppercase;letter-spacing:0.5px;margin-bottom:10px;}
+    .order-row{display:flex;justify-content:space-between;font-size:14px;padding:4px 0;color:#374151;}
+    .order-row.total{font-weight:700;color:#191c20;border-top:1px solid #e5e7eb;padding-top:8px;margin-top:4px;}
+  </style>
+</head>
+<body>
+  <div class="modal">
+    <!-- World ID Logo -->
+    <div class="worldid-logo">
+      <svg viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="10" stroke="white" stroke-width="2"/><circle cx="12" cy="12" r="4" stroke="white" stroke-width="2"/></svg>
+    </div>
+
+    <!-- Partner row -->
+    <div class="partner-row">
+      <span class="partner-badge"><span class="dot"></span> JPYC EC Agent</span>
+    </div>
+
+    <!-- Title -->
+    <h1 class="title">World IDで本人確認</h1>
+    <p class="desc">購入者が実在する人間であることを証明します。<br>認証 = 購入の承認となります。</p>
+
+    <!-- Human Badge -->
+    <div class="human-badge">
+      <svg viewBox="0 0 24 24" fill="none"><path d="M9 12l2 2 4-4" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="2"/></svg>
+      human verified
+    </div>
+
+    <div class="divider"></div>
+
+    <!-- Verify button -->
+    <button class="btn-verify" id="verify-btn" onclick="startVerification()">
+      <svg viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="2"/><circle cx="12" cy="12" r="4" stroke="currentColor" stroke-width="2"/></svg>
+      World Appで認証する
+    </button>
+
+    <!-- Secondary buttons -->
+    <a id="open-worldapp" class="btn-secondary" href="#">World Appで開く</a>
+    <a id="back-telegram" class="btn-back" href="tg://resolve?domain=mameta_jpyc_ec_bot">Telegramに戻る</a>
+
+    <!-- Status -->
+    <div id="status" class="status-box"></div>
+
+    <!-- Footer -->
+    <div class="footer">
+      Powered by <a href="https://world.org/world-id" target="_blank">World ID</a>
+    </div>
+  </div>
+
+  <script type="module">
+    import { IDKit, orbLegacy } from "https://esm.sh/@worldcoin/idkit-core@4";
+
+    const params = new URLSearchParams(window.location.search);
+    const token = params.get("token");
+    const statusEl = document.getElementById("status");
+
+    function showStatus(type, html) {
+      statusEl.className = "status-box show " + type;
+      statusEl.innerHTML = html;
+    }
+
+    if (!token) {
+      showStatus("error", "無効なリンクです。Telegramのリンクからアクセスしてください。");
+      document.getElementById("verify-btn").disabled = true;
+    }
+
+    window.startVerification = async function() {
+      const btn = document.getElementById("verify-btn");
+      const openBtn = document.getElementById("open-worldapp");
+      const backBtn = document.getElementById("back-telegram");
+      btn.disabled = true;
+      showStatus("loading", '<span class="spinner"></span> 準備中...');
+
+      try {
+        const rpSigRes = await fetch("/api/rp-signature", {
+          method: "POST",
+          headers: {"content-type":"application/json"},
+          body: JSON.stringify({action:"clawathon"})
+        });
+        const rpSig = await rpSigRes.json();
+
+        const request = await IDKit.request({
+          app_id: "app_6510691f3f495a80334f07cb73106ae9",
+          action: "clawathon",
+          rp_context: {
+            rp_id: "rp_6c62438116ea14f3",
+            nonce: rpSig.nonce,
+            created_at: rpSig.created_at,
+            expires_at: rpSig.expires_at,
+            signature: rpSig.sig,
+          },
+          allow_legacy_proofs: true,
+          environment: "production",
+        }).preset(orbLegacy());
+
+        const connectUrl = request.connectorURI;
+        const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
+
+        if (isMobile) {
+          const w = window.open(connectUrl, "_blank");
+          showStatus("loading", '<span class="spinner"></span> World Appで認証してください。<br>認証後、自動で結果が表示されます。');
+        } else {
+          openBtn.href = connectUrl;
+          openBtn.style.display = "block";
+          showStatus("loading", '<span class="spinner"></span> スマホのWorld Appでスキャンしてください。');
+        }
+
+        const response = await request.pollUntilCompletion();
+
+        if (response.success === false || response.error) {
+          showStatus("error", "World Appとの接続に失敗しました。もう一度お試しください。");
+          btn.disabled = false;
+          return;
+        }
+
+        showStatus("loading", '<span class="spinner"></span> ゼロ知識証明を検証中...');
+        openBtn.style.display = "none";
+
+        const verifyRes = await fetch("/api/verify-proof", {
+          method: "POST",
+          headers: {"content-type":"application/json"},
+          body: JSON.stringify({ token, idkitResponse: response })
+        });
+        const result = await verifyRes.json();
+
+        if (result.success) {
+          showStatus("success", '認証完了！購入が承認されました。<br>Telegramに戻って購入を完了してください。');
+          backBtn.style.display = "block";
+          setTimeout(() => {
+            if (window.Telegram && window.Telegram.WebApp) {
+              window.Telegram.WebApp.close();
+            }
+          }, 2000);
+        } else {
+          showStatus("error", "認証失敗: " + (result.error || result.detail || "不明なエラー"));
+          btn.disabled = false;
+        }
+      } catch (err) {
+        showStatus("error", "エラー: " + err.message);
+        btn.disabled = false;
+      }
+    };
+  </script>
+</body>
+</html>
