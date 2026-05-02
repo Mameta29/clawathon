@@ -79,6 +79,7 @@ On-chain Settlement (EIP-3009 ReceiveWithAuthorization)
 
 ## Key Features
 
+- **World ID本人認証**: 購入前にWorld IDで「実在する人間」であることを証明。AIエージェントの悪用・転売目的の大量購入を防止
 - **プライバシー保護された推論**: NEAR AI Cloud Private Inference（Intel TDX + NVIDIA TEE）でユーザーの購入データが暗号化されたまま処理
 - **ガスレス決済**: EIP-3009による署名ベースの送金。ユーザーはガス代不要
 - **秘密鍵の安全管理**: OWS (Open Wallet Standard) がAES-256-GCMで暗号化保管。エージェントは署名APIのみを呼び出し、秘密鍵に直接アクセスしない
@@ -86,20 +87,55 @@ On-chain Settlement (EIP-3009 ReceiveWithAuthorization)
 - **対話型UX**: Telegramでの自然な日本語会話で購入フロー全体を完結
 - **マルチチェーン対応**: JPYC ECはEthereum, Polygon, Avalancheに対応（デモはSepolia testnet）
 
-## Security Layers
+## Why World ID? — AIエージェント時代の転売・買い占め防止
 
-本プロジェクトは3層のセキュリティで構成されています：
+AIエージェントが自律的に購入できる世界では、新たなリスクが生まれます：
 
 ```
-Layer 1: AI推論のプライバシー
+[リスクシナリオ]
+悪意あるユーザー → 複数のAIエージェントを同時起動
+  → 人気商品（お米、限定品等）を大量購入
+  → 転売で利益を得る
+  → 一般消費者が買えなくなる（2024-2025年の日本のお米騰貴と同じ構造）
+```
+
+World IDは**「1人1認証」を暗号学的に保証**します：
+
+| 対策 | 仕組み |
+|---|---|
+| **Sybil耐性** | 1つのWorld IDで1回のみ認証可能。複数アカウントによる買い占めを阻止 |
+| **プライバシー保護** | ゼロ知識証明により、個人情報を一切開示せずに「人間である」ことだけを証明 |
+| **Botフィルタリング** | Orb認証済みの人間だけが購入可能。自動化された買い占めBotを排除 |
+| **アクション単位の制御** | アクションごとにnullifierが異なるため、同じ人が同じ商品カテゴリを重複購入することを防止可能 |
+
+```
+[World ID導入後]
+ユーザー → World IDで認証（1人1回のみ）
+  → AIエージェントが購入代行
+  → 1人が大量のエージェントを動かしても、認証は1回分のみ
+  → 公平な購入機会の保証
+```
+
+**AIエージェントに「手足」を与えるなら、「誰の手足か」を証明する仕組みが不可欠。** World IDはAgentic Commerceにおける信頼のアンカーとして機能します。
+
+## Security Layers
+
+本プロジェクトは4層のセキュリティで構成されています：
+
+```
+Layer 1: 本人認証（Sybil耐性）
+  └── World ID (Zero-Knowledge Proof)
+       → 購入者が実在する人間であることを証明。買い占め・転売を防止
+
+Layer 2: AI推論のプライバシー
   └── NEAR AI Cloud Private Inference (TEE)
        → 購入意図・個人情報がプロバイダーにも見えない
 
-Layer 2: 秘密鍵の保護
+Layer 3: 秘密鍵の保護
   └── OWS Vault (AES-256-GCM + scrypt)
        → AIエージェントは署名APIのみ利用、秘密鍵に直接アクセス不可
 
-Layer 3: 決済の安全性
+Layer 4: 決済の安全性
   └── EIP-3009 ReceiveWithAuthorization
        → 送金先が注文ごとに限定、任意のアドレスへの送金は不可能
 ```
@@ -116,6 +152,7 @@ Layer 3: 決済の安全性
 
 | Component | Technology |
 |---|---|
+| Identity | [World ID](https://world.org/world-id) (Zero-Knowledge Proof of Personhood) |
 | AI Runtime | [OpenClaw](https://github.com/openclaw/openclaw) |
 | AI Inference | [NEAR AI Cloud](https://cloud.near.ai) (Private Inference / TEE) |
 | LLM | Claude Sonnet 4.5 (via NEAR AI Cloud) |
@@ -191,6 +228,7 @@ VPS (1GB RAM) での運用時、以下の最適化で応答時間を **75秒 →
 
 - Track: **On-chain Settlement for AI** - エージェントによるステーブルコイン決済の自動執行
 - NEAR Award: **Best Agentic Commerce Use Case** + **Best NEAR Tech Integration**
+- World Award: **World ID** による本人認証で転売・買い占め防止
 
 ## License
 
