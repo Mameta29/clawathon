@@ -16,88 +16,57 @@ Telegram Botに話しかけてください:
 
 **Bot**: [@mameta_jpyc_ec_bot](https://t.me/mameta_jpyc_ec_bot)
 
-## Why Private Inference Matters for Agentic Commerce
+---
 
-AIエージェントが決済を代行する場合、以下の機密情報がAIモデルに送信されます：
+## 9ステップ → 3タップ
 
-| データ | リスク |
-|---|---|
-| 配送先住所・氏名・電話番号 | 個人情報漏洩 |
-| 購入商品・金額 | 購買行動の追跡 |
-| ウォレットアドレス | 資産残高の特定 |
-| EIP-712署名パラメータ | 決済情報の傍受 |
+<p align="center">
+  <img src="docs/images/before-after.png" alt="Before/After比較" width="700">
+</p>
 
-通常のAPI呼び出しでは、これらが**プロバイダーのサーバーに平文で送信**されます。
+従来の暗号資産EC購入には9ステップと専門知識が必要でした。JPYC EC Agentは**会話するだけ、3タップ、ガス代ゼロ**で購入を完結します。
 
-```
-[通常のAPI]
-ユーザー → AIプロバイダー(平文でプロンプトを処理) → 応答
-           ⚠️ プロバイダーが購入データを閲覧可能
-```
-
-NEAR AI CloudのPrivate Inferenceでは、**Intel TDX + NVIDIA TEEの暗号化環境内**で推論が実行されます：
-
-```
-[NEAR AI Cloud Private Inference]
-ユーザー → TEE(暗号化された金庫内で処理) → 暗号署名付き応答
-           ✅ NEAR自身を含め、誰もプロンプトを閲覧不可
-```
-
-**Agentic Commerceが実用化されるためには、「AIエージェントが何を買ったか」をAIプロバイダーに知られない仕組みが不可欠です。** 本プロジェクトはNEAR AI Cloudを使うことで、この課題を解決しています。
+---
 
 ## Architecture
 
-```
-User (Telegram)
-  |
-  v
-OpenClaw Gateway (VPS)
-  |
-  ├── NEAR AI Cloud (Private Inference / TEE)
-  │     └── Claude Sonnet 4.5 (暗号化環境内で推論)
-  │
-  ├── jpyc-ec-purchase skill  ... JPYC EC APIで商品検索・注文作成
-  ├── ows skill                ... EIP-712署名生成（秘密鍵はOWSが管理）
-  └── recurring-purchase skill ... cron定期購入スケジューリング
-  |
-  v
-JPYC EC Platform API (stg-ec.jpyc-service.com)
-  |
-  v
-On-chain Settlement (EIP-3009 ReceiveWithAuthorization)
-```
+<p align="center">
+  <img src="docs/images/architecture.png" alt="システムアーキテクチャ" width="700">
+</p>
 
-## How It Works
+---
 
-1. **ユーザーがTelegramでメッセージ送信** - 「テストショップでお米買って」
-2. **NEAR AI CloudのTEE内でAI推論を実行** - プロンプト（個人情報含む）は暗号化されたまま処理
-3. **AIエージェントが購入スキルを実行** - ショップ検索、商品選択、残高確認、送料計算
-4. **ユーザーに確認** - 注文サマリを表示し、承認を得る
-5. **OWSでEIP-712署名を生成** - 秘密鍵はOWS Vaultで暗号化管理、エージェントは直接触れない
-6. **署名をJPYC EC APIに提出** - EIP-3009 `ReceiveWithAuthorization` でガスレス決済
-7. **注文完了** - 注文番号と確認メールが届く
+## Purchase Flow
+
+<p align="center">
+  <img src="docs/images/purchase-flow.png" alt="購入フローシーケンス図" width="700">
+</p>
+
+ユーザーの操作は3回だけ。残りは全てAIが自動実行します。
+
+1. **「お米10kg買って」** — Telegramでメッセージを送る
+2. **World IDボタンを押す** — 本人確認 + 購入承認（ゼロ知識証明）
+3. **署名ボタンを押す** — EIP-3009ガスレス決済を実行
+
+---
 
 ## Key Features
 
 - **World ID本人認証**: 購入前にWorld IDで「実在する人間」であることを証明。AIエージェントの悪用・転売目的の大量購入を防止
 - **プライバシー保護された推論**: NEAR AI Cloud Private Inference（Intel TDX + NVIDIA TEE）でユーザーの購入データが暗号化されたまま処理
 - **ガスレス決済**: EIP-3009による署名ベースの送金。ユーザーはガス代不要
+- **オンチェーンサブスク決済**: ブロックチェーンでは不可能だった定期購入を、AIエージェント + Cronスケジューラで実現
 - **秘密鍵の安全管理**: OWS (Open Wallet Standard) がAES-256-GCMで暗号化保管。エージェントは署名APIのみを呼び出し、秘密鍵に直接アクセスしない
-- **定期購入**: OpenClaw cronスケジューラで毎月自動購入を設定可能
 - **対話型UX**: Telegramでの自然な日本語会話で購入フロー全体を完結
 - **マルチチェーン対応**: JPYC ECはEthereum, Polygon, Avalancheに対応（デモはSepolia testnet）
+
+---
 
 ## Why World ID? — AIエージェント時代の転売・買い占め防止
 
 AIエージェントが自律的に購入できる世界では、新たなリスクが生まれます：
 
-```
-[リスクシナリオ]
-悪意あるユーザー → 複数のAIエージェントを同時起動
-  → 人気商品（お米、限定品等）を大量購入
-  → 転売で利益を得る
-  → 一般消費者が買えなくなる（2024-2025年の日本のお米騰貴と同じ構造）
-```
+> 悪意あるユーザーが複数のAIエージェントを同時起動 → 人気商品を大量購入 → 転売で利益を得る → 一般消費者が買えなくなる（2024-2025年の日本のお米騰貴と同じ構造）
 
 World IDは**「1人1認証」を暗号学的に保証**します：
 
@@ -108,37 +77,42 @@ World IDは**「1人1認証」を暗号学的に保証**します：
 | **Botフィルタリング** | Orb認証済みの人間だけが購入可能。自動化された買い占めBotを排除 |
 | **アクション単位の制御** | アクションごとにnullifierが異なるため、同じ人が同じ商品カテゴリを重複購入することを防止可能 |
 
-```
-[World ID導入後]
-ユーザー → World IDで認証（1人1回のみ）
-  → AIエージェントが購入代行
-  → 1人が大量のエージェントを動かしても、認証は1回分のみ
-  → 公平な購入機会の保証
-```
+**AIエージェントに「手足」を与えるなら、「誰の手足か」を証明する仕組みが不可欠。**
 
-**AIエージェントに「手足」を与えるなら、「誰の手足か」を証明する仕組みが不可欠。** World IDはAgentic Commerceにおける信頼のアンカーとして機能します。
+---
 
-## Security Layers
+## Why NEAR AI Cloud? — 購買データのプライバシー保護
 
-本プロジェクトは4層のセキュリティで構成されています：
+AIエージェントが決済を代行する場合、配送先住所・購入金額・ウォレットアドレス・署名パラメータなどの機密情報がAIモデルに送信されます。
 
-```
-Layer 1: 本人認証（Sybil耐性）
-  └── World ID (Zero-Knowledge Proof)
-       → 購入者が実在する人間であることを証明。買い占め・転売を防止
+通常のAPIではプロバイダーがこれらを平文で受け取りますが、NEAR AI CloudのPrivate Inferenceでは **Intel TDX + NVIDIA TEEの暗号化環境内** で推論が実行され、NEAR自身を含め誰もプロンプトを閲覧できません。
 
-Layer 2: AI推論のプライバシー
-  └── NEAR AI Cloud Private Inference (TEE)
-       → 購入意図・個人情報がプロバイダーにも見えない
+**Agentic Commerceの実用化には、「AIが何を買ったか」を知られない仕組みが必要です。**
 
-Layer 3: 秘密鍵の保護
-  └── OWS Vault (AES-256-GCM + scrypt)
-       → AIエージェントは署名APIのみ利用、秘密鍵に直接アクセス不可
+---
 
-Layer 4: 決済の安全性
-  └── EIP-3009 ReceiveWithAuthorization
-       → 送金先が注文ごとに限定、任意のアドレスへの送金は不可能
-```
+## オンチェーンサブスク決済の実現
+
+ERC-20トークンはpull型決済ができないため、ブロックチェーンでの定期購入は事実上不可能でした。
+
+| 従来のオンチェーン | JPYC EC Agent |
+|---|---|
+| サブスク不可能（pull型決済不可） | AIがCronで毎月自動署名 |
+| 毎回手動署名 + ガス代 | EIP-3009でガスレス自動実行 |
+| Approve全額許可はリスク | OWSが安全に署名代行 |
+| 継続課金モデル不可 | MRR（月次リカーリング収益）実現 |
+
+ユーザーは「毎月お米買って」と一度言うだけ。AIが毎月自動で署名・決済を実行します。
+
+---
+
+## 4-Layer Security Model
+
+<p align="center">
+  <img src="docs/images/security-layers.png" alt="4層セキュリティモデル" width="600">
+</p>
+
+---
 
 ## Skills
 
